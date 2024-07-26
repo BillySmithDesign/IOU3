@@ -1,4 +1,4 @@
-document.getElementById('debtForm').addEventListener('submit', function (event) {
+document.getElementById('debtForm').addEventListener('submit', function(event) {
     event.preventDefault();
 
     let friendName = document.getElementById('friendName').value;
@@ -33,9 +33,10 @@ document.getElementById('debtForm').addEventListener('submit', function (event) 
                 addDebtToUI(debt, data.id);
                 updateTotalBalance();
                 document.getElementById('debtForm').reset();
-            });
+            }).catch(err => console.error('JSON parse error:', err));
         } else {
             console.error('Error adding debt:', response.statusText);
+            response.text().then(text => console.error('Response text:', text));
         }
     }).catch(error => console.error('Fetch error:', error));
 });
@@ -71,7 +72,7 @@ function addPartialPayment(id, button, totalOwed) {
         .then(data => {
             button.parentNode.querySelector('span').innerHTML += `<br>Payment: $${amount.toFixed(2)} (Remaining: $${data.remainingOwed.toFixed(2)})`;
             updateTotalBalance();
-        }).catch(error => console.error('Fetch error:', error));
+        }).catch(err => console.error('JSON parse error:', err));
     } else {
         alert("Please enter a valid payment amount.");
     }
@@ -90,7 +91,7 @@ function updateTotalBalance() {
             totalBalance += remainingOwed;
         });
         document.getElementById('totalBalance').innerText = totalBalance.toFixed(2);
-    }).catch(error => console.error('Fetch error:', error));
+    }).catch(err => console.error('Fetch error:', err));
 }
 
 // Initial fetch and display of debts
@@ -101,4 +102,4 @@ fetch('/api/debts')
         addDebtToUI(debt, debt.id);
     });
     updateTotalBalance();
-}).catch(error => console.error('Fetch error:', error));
+}).catch(err => console.error('Fetch error:', err));
