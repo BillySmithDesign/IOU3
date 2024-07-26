@@ -1,4 +1,4 @@
-document.getElementById('debtForm').addEventListener('submit', function(event) {
+document.getElementById('debtForm').addEventListener('submit', function (event) {
     event.preventDefault();
 
     let friendName = document.getElementById('friendName').value;
