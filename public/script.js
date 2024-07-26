@@ -3,14 +3,12 @@ document.getElementById('debtForm').addEventListener('submit', function(event) {
 
     let friendName = document.getElementById('friendName').value;
     let telegramUsername = document.getElementById('telegramUsername').value;
-    let exchangeDate = document.getElementById('exchangeDate').value;
     let totalOwed = parseFloat(document.getElementById('totalOwed').value);
     let dueDate = document.getElementById('dueDate').value;
 
     let debt = {
         friendName,
         telegramUsername,
-        exchangeDate,
         totalOwed,
         dueDate,
         partialPayments: []
@@ -28,7 +26,7 @@ function addDebt(debt) {
     li.innerHTML = `
         <span>
             <strong>${debt.friendName}</strong> @${debt.telegramUsername}<br>
-            Date Collected: ${debt.exchangeDate}<br>
+            
             Total Owed: $${debt.totalOwed.toFixed(2)}<br>
             Due Date: ${debt.dueDate}
         </span>
