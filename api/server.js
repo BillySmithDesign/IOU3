@@ -43,11 +43,11 @@ app.get('/api/debts', async (req, res) => {
 app.post('/api/debts', async (req, res) => {
     const { friendName, telegramUsername, exchangeDate, totalOwed, dueDate, partialPayments } = req.body;
     try {
-        await pool.query(
-            'INSERT INTO debts (friendName, telegramUsername, exchangeDate, totalOwed, dueDate, partialPayments) VALUES ($1, $2, $3, $4, $5, $6)',
+        const result = await pool.query(
+            'INSERT INTO debts (friendName, telegramUsername, exchangeDate, totalOwed, dueDate, partialPayments) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
             [friendName, telegramUsername, exchangeDate, totalOwed, dueDate, JSON.stringify(partialPayments || [])]
         );
-        res.status(201).send();
+        res.status(201).json({ id: result.rows[0].id });
     } catch (err) {
         console.error(err);
         res.status(500).send('Server error');

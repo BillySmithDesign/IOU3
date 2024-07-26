@@ -22,13 +22,17 @@ document.getElementById('debtForm').addEventListener('submit', function(event) {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(debt)
-    }).then(response => response.json())
-      .then(data => {
-          addDebtToUI(debt, data.id);
-          updateTotalBalance();
-      });
-
-    document.getElementById('debtForm').reset();
+    }).then(response => {
+        if (response.ok) {
+            response.json().then(data => {
+                addDebtToUI(debt, data.id);
+                updateTotalBalance();
+                document.getElementById('debtForm').reset();
+            });
+        } else {
+            console.error('Error adding debt:', response.statusText);
+        }
+    });
 });
 
 function addDebtToUI(debt, id) {
