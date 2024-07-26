@@ -16,12 +16,22 @@ document.getElementById('debtForm').addEventListener('submit', function(event) {
         partialPayments: []
     };
 
-    addDebt(debt);
-    updateTotalBalance();
+    fetch('/api/debts', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(debt)
+    }).then(response => response.json())
+      .then(data => {
+          addDebtToUI(debt, data.id);
+          updateTotalBalance();
+      });
+
     document.getElementById('debtForm').reset();
 });
 
-function addDebt(debt) {
+function addDebtToUI(debt, id) {
     let debtList = document.getElementById('debtList');
     let li = document.createElement('li');
 
@@ -32,32 +42,50 @@ function addDebt(debt) {
             Total Owed: $${debt.totalOwed.toFixed(2)}<br>
             Due Date: ${debt.dueDate}
         </span>
-        <button onclick="addPartialPayment(this, ${debt.totalOwed})">Add Payment</button>
+        <button onclick="addPartialPayment(${id}, this, ${debt.totalOwed})">Add Payment</button>
     `;
 
     debtList.appendChild(li);
 }
 
-function addPartialPayment(button, totalOwed) {
+function addPartialPayment(id, button, totalOwed) {
     let amount = parseFloat(prompt("Enter payment amount:"));
     if (!isNaN(amount)) {
-        totalOwed -= amount;
-        button.parentNode.querySelector('span').innerHTML += `<br>Payment: $${amount.toFixed(2)} (Remaining: $${totalOwed.toFixed(2)})`;
-        updateTotalBalance();
+        fetch(`/api/debts/${id}/payments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount })
+        })
+        .then(response => response.json())
+        .then(data => {
+            button.parentNode.querySelector('span').innerHTML += `<br>Payment: $${amount.toFixed(2)} (Remaining: $${data.remainingOwed.toFixed(2)})`;
+            updateTotalBalance();
+        });
     }
 }
 
 function updateTotalBalance() {
-    let totalBalance = 0;
-    let debts = document.querySelectorAll('#debtList li span');
-    debts.forEach(debt => {
-        let totalText = debt.innerHTML.match(/Total Owed: \$(\d+\.\d+)/);
-        let remainingText = debt.innerHTML.match(/Remaining: \$(\d+\.\d+)/);
-        if (remainingText) {
-            totalBalance += parseFloat(remainingText[1]);
-        } else if (totalText) {
-            totalBalance += parseFloat(totalText[1]);
-        }
+    fetch('/api/debts')
+    .then(response => response.json())
+    .then(debts => {
+        let totalBalance = 0;
+        debts.forEach(debt => {
+            let partialPayments = JSON.parse(debt.partialPayments || '[]');
+            let remainingOwed = debt.totalOwed - partialPayments.reduce((acc, payment) => acc + payment, 0);
+            totalBalance += remainingOwed;
+        });
+        document.getElementById('totalBalance').innerText = totalBalance.toFixed(2);
     });
-    document.getElementById('totalBalance').innerText = totalBalance.toFixed(2);
 }
+
+// Initial fetch and display of debts
+fetch('/api/debts')
+.then(response => response.json())
+.then(debts => {
+    debts.forEach(debt => {
+        addDebtToUI(debt, debt.id);
+    });
+    updateTotalBalance();
+});
