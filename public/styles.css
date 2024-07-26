@@ -4,9 +4,9 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
-    background-image: url('https://img.freepik.com/premium-photo/red-blue-background-with-man-red-suit-standing-front-large-red-circle_927978-1356.jpg?w=900');
+    background-image: url('https://img.freepik.com/premium-photo/red-blue-background-with-man-red-suit-standing-front-large-red-circle_927978-1356.jpg');
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
@@ -100,4 +100,29 @@ li span {
     h1 {
         font-size: 20px;
     }
+}
+
+/* Overdue Debts Table */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+}
+
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+th {
+    background: #f4f4f4;
+}
+
+th:first-child, td:first-child {
+    width: 40%;
+}
+
+th:last-child, td:last-child {
+    width: 30%;
 }

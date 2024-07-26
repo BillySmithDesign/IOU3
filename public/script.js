@@ -41,13 +41,17 @@ document.getElementById('debtForm').addEventListener('submit', function(event) {
     }).catch(error => console.error('Fetch error:', error));
 });
 
+document.getElementById('overdueDebtsButton').addEventListener('click', function() {
+    window.location.href = 'overdue.html';
+});
+
 function addDebtToUI(debt, id) {
     let debtList = document.getElementById('debtList');
     let li = document.createElement('li');
 
     li.innerHTML = `
         <span>
-            <strong>${debt.friendName}</strong> (@${debt.telegramUsername})<br>
+            <strong>${debt.friendName}</strong> (<a href="https://t.me/${debt.telegramUsername}" target="_blank">@${debt.telegramUsername}</a>)<br>
             Date Collected: ${debt.exchangeDate}<br>
             Total Owed: $${debt.totalOwed.toFixed(2)}<br>
             Due Date: ${debt.dueDate}
