@@ -1,57 +1,81 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const { Pool } = require('pg');
 const path = require('path');
-const Database = require('better-sqlite3');
+require('dotenv').config({ path: '.env.local' });
 
 const app = express();
-const db = new Database('debts.db');
+const pool = new Pool({
+    connectionString: process.env.POSTGRES_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
 
 // Create table if it doesn't exist
-db.exec(`
+pool.query(`
   CREATE TABLE IF NOT EXISTS debts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    friendName TEXT NOT NULL,
-    telegramUsername TEXT NOT NULL,
-    exchangeDate TEXT NOT NULL,
-    totalOwed REAL NOT NULL,
-    dueDate TEXT NOT NULL,
-    partialPayments TEXT
+    id SERIAL PRIMARY KEY,
+    friendName VARCHAR(100) NOT NULL,
+    telegramUsername VARCHAR(100) NOT NULL,
+    exchangeDate DATE NOT NULL,
+    totalOwed DECIMAL(10, 2) NOT NULL,
+    dueDate DATE NOT NULL,
+    partialPayments JSONB
   )
-`);
+`).catch(err => console.error('Error creating table:', err));
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Get all debts
-app.get('/api/debts', (req, res) => {
-    const stmt = db.prepare('SELECT * FROM debts');
-    const debts = stmt.all();
-    res.json(debts);
+app.get('/api/debts', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM debts');
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
+    }
 });
 
 // Add a new debt
-app.post('/api/debts', (req, res) => {
+app.post('/api/debts', async (req, res) => {
     const { friendName, telegramUsername, exchangeDate, totalOwed, dueDate, partialPayments } = req.body;
-    const stmt = db.prepare('INSERT INTO debts (friendName, telegramUsername, exchangeDate, totalOwed, dueDate, partialPayments) VALUES (?, ?, ?, ?, ?, ?)');
-    stmt.run(friendName, telegramUsername, exchangeDate, totalOwed, dueDate, JSON.stringify(partialPayments || []));
-    res.status(201).send();
+    try {
+        await pool.query(
+            'INSERT INTO debts (friendName, telegramUsername, exchangeDate, totalOwed, dueDate, partialPayments) VALUES ($1, $2, $3, $4, $5, $6)',
+            [friendName, telegramUsername, exchangeDate, totalOwed, dueDate, JSON.stringify(partialPayments || [])]
+        );
+        res.status(201).send();
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
+    }
 });
 
 // Update partial payments for a debt
-app.post('/api/debts/:id/payments', (req, res) => {
+app.post('/api/debts/:id/payments', async (req, res) => {
     const { id } = req.params;
     const { amount } = req.body;
-    const debtStmt = db.prepare('SELECT * FROM debts WHERE id = ?');
-    const debt = debtStmt.get(id);
-    if (!debt) {
-        return res.status(404).send('Debt not found');
+    try {
+        const debtResult = await pool.query('SELECT * FROM debts WHERE id = $1', [id]);
+        const debt = debtResult.rows[0];
+        if (!debt) {
+            return res.status(404).send('Debt not found');
+        }
+        const partialPayments = JSON.parse(debt.partialPayments || '[]');
+        partialPayments.push(amount);
+        const remainingOwed = debt.totalOwed - partialPayments.reduce((acc, payment) => acc + payment, 0);
+        await pool.query(
+            'UPDATE debts SET partialPayments = $1 WHERE id = $2',
+            [JSON.stringify(partialPayments), id]
+        );
+        res.json({ remainingOwed });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server error');
     }
-    const partialPayments = JSON.parse(debt.partialPayments || '[]');
-    partialPayments.push(amount);
-    const remainingOwed = debt.totalOwed - partialPayments.reduce((acc, payment) => acc + payment, 0);
-    const updateStmt = db.prepare('UPDATE debts SET partialPayments = ? WHERE id = ?');
-    updateStmt.run(JSON.stringify(partialPayments), id);
-    res.json({ remainingOwed });
 });
 
 module.exports = app;
