@@ -1,39 +1,18 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const fs = require('fs');
+const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 
 const app = express();
-const dataFilePath = path.join(__dirname, '../debts.json');
+const prisma = new PrismaClient();
 
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Read debts from file
-function readDebts() {
-    try {
-        const data = fs.readFileSync(dataFilePath);
-        return JSON.parse(data);
-    } catch (err) {
-        console.error('Error reading debts:', err);
-        throw err;
-    }
-}
-
-// Write debts to file
-function writeDebts(debts) {
-    try {
-        fs.writeFileSync(dataFilePath, JSON.stringify(debts, null, 2));
-    } catch (err) {
-        console.error('Error writing debts:', err);
-        throw err;
-    }
-}
-
 // Get all debts
-app.get('/api/debts', (req, res) => {
+app.get('/api/debts', async (req, res) => {
     try {
-        const debts = readDebts();
+        const debts = await prisma.debt.findMany();
         res.json(debts);
     } catch (err) {
         console.error('Error reading debts:', err);
@@ -42,13 +21,19 @@ app.get('/api/debts', (req, res) => {
 });
 
 // Add a new debt
-app.post('/api/debts', (req, res) => {
+app.post('/api/debts', async (req, res) => {
     try {
-        const debts = readDebts();
-        const newDebt = req.body;
-        newDebt.id = debts.length ? debts[debts.length - 1].id + 1 : 1;
-        debts.push(newDebt);
-        writeDebts(debts);
+        const { friendName, telegramUsername, exchangeDate, totalOwed, dueDate } = req.body;
+        const newDebt = await prisma.debt.create({
+            data: {
+                friendName,
+                telegramUsername,
+                exchangeDate: new Date(exchangeDate),
+                totalOwed,
+                dueDate: new Date(dueDate),
+                partialPayments: []
+            }
+        });
         res.status(201).json({ id: newDebt.id });
     } catch (err) {
         console.error('Error adding debt:', err);
@@ -57,20 +42,20 @@ app.post('/api/debts', (req, res) => {
 });
 
 // Update partial payments for a debt
-app.post('/api/debts/:id/payments', (req, res) => {
+app.post('/api/debts/:id/payments', async (req, res) => {
     try {
-        const debts = readDebts();
-        const id = parseInt(req.params.id, 10);
+        const { id } = req.params;
         const { amount } = req.body;
-        const debt = debts.find(d => d.id === id);
+        const debt = await prisma.debt.findUnique({ where: { id: parseInt(id, 10) } });
         if (!debt) {
             return res.status(404).send('Debt not found');
         }
-        const partialPayments = debt.partialPayments || [];
-        partialPayments.push(amount);
-        debt.partialPayments = partialPayments;
+        const partialPayments = debt.partialPayments.concat(amount);
         const remainingOwed = debt.totalOwed - partialPayments.reduce((acc, payment) => acc + payment, 0);
-        writeDebts(debts);
+        await prisma.debt.update({
+            where: { id: parseInt(id, 10) },
+            data: { partialPayments }
+        });
         res.json({ remainingOwed });
     } catch (err) {
         console.error('Error updating payments:', err);
