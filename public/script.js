@@ -7,11 +7,6 @@ document.getElementById('debtForm').addEventListener('submit', function(event) {
     let totalOwed = parseFloat(document.getElementById('totalOwed').value);
     let dueDate = document.getElementById('dueDate').value;
 
-    if (isNaN(totalOwed)) {
-        alert("Please enter a valid amount for Total Owed.");
-        return;
-    }
-
     let debt = {
         friendName,
         telegramUsername,
@@ -21,26 +16,12 @@ document.getElementById('debtForm').addEventListener('submit', function(event) {
         partialPayments: []
     };
 
-    fetch('/api/debts', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(debt)
-    }).then(response => {
-        if (response.ok) {
-            response.json().then(data => {
-                addDebtToUI(debt, data.id);
-                updateTotalBalance();
-                document.getElementById('debtForm').reset();
-            });
-        } else {
-            console.error('Error adding debt:', response.statusText);
-        }
-    }).catch(error => console.error('Fetch error:', error));
+    addDebt(debt);
+    updateTotalBalance();
+    document.getElementById('debtForm').reset();
 });
 
-function addDebtToUI(debt, id) {
+function addDebt(debt) {
     let debtList = document.getElementById('debtList');
     let li = document.createElement('li');
 
@@ -51,54 +32,33 @@ function addDebtToUI(debt, id) {
             Total Owed: $${debt.totalOwed.toFixed(2)}<br>
             Due Date: ${debt.dueDate}
         </span>
-        <button onclick="addPartialPayment(${id}, this, ${debt.totalOwed})">Add Payment</button>
+        <button onclick="addPartialPayment(this, ${debt.totalOwed})">Add Payment</button>
     `;
 
     debtList.appendChild(li);
 }
 
-function addPartialPayment(id, button, totalOwed) {
+function addPartialPayment(button, totalOwed) {
     let amount = parseFloat(prompt("Enter payment amount:"));
     if (!isNaN(amount)) {
-        fetch(`/api/debts/${id}/payments`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ amount })
-        })
-        .then(response => response.json())
-        .then(data => {
-            button.parentNode.querySelector('span').innerHTML += `<br>Payment: $${amount.toFixed(2)} (Remaining: $${data.remainingOwed.toFixed(2)})`;
-            updateTotalBalance();
-        }).catch(error => console.error('Fetch error:', error));
-    } else {
-        alert("Please enter a valid payment amount.");
+        totalOwed -= amount;
+        button.parentNode.querySelector('span').innerHTML += `<br>Payment: $${amount.toFixed(2)} (Remaining: $${totalOwed.toFixed(2)})`;
+        updateTotalBalance();
     }
 }
 
 function updateTotalBalance() {
-    fetch('/api/debts')
-    .then(response => response.json())
-    .then(debts => {
-        let totalBalance = 0;
-        debts.forEach(debt => {
-            let partialPayments = JSON.parse(debt.partialPayments || '[]');
-            let totalOwed = parseFloat(debt.totalOwed) || 0;
-            let paidAmount = partialPayments.reduce((acc, payment) => acc + parseFloat(payment) || 0, 0);
-            let remainingOwed = totalOwed - paidAmount;
-            totalBalance += remainingOwed;
-        });
-        document.getElementById('totalBalance').innerText = totalBalance.toFixed(2);
-    }).catch(error => console.error('Fetch error:', error));
+    let totalBalance = 0;
+    let debts = document.querySelectorAll('#debtList li span');
+    debts.forEach(debt => {
+        let totalText = debt.innerHTML.match(/Total Owed: \$(\d+\.\d+)/);
+        let remainingText = debt.innerHTML.match(/Remaining: \$(\d+\.\d+)/);
+        if (remainingText) {
+            totalBalance += parseFloat(remainingText[1]);
+        } else if (totalText) {
+            totalBalance += parseFloat(totalText[1]);
+        }
+    });
+    document.getElementById('totalBalance').innerText = totalBalance.toFixed(2);
 }
 
-// Initial fetch and display of debts
-fetch('/api/debts')
-.then(response => response.json())
-.then(debts => {
-    debts.forEach(debt => {
-        addDebtToUI(debt, debt.id);
-    });
-    updateTotalBalance();
-}).catch(error => console.error('Fetch error:', error));
