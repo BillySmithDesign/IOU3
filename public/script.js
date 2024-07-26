@@ -27,7 +27,7 @@ function addDebt(debt) {
 
     li.innerHTML = `
         <span>
-            <strong>${debt.friendName}</strong> (@${debt.telegramUsername})<br>
+            <strong>${debt.friendName}</strong> @${debt.telegramUsername}<br>
             Date Collected: ${debt.exchangeDate}<br>
             Total Owed: $${debt.totalOwed.toFixed(2)}<br>
             Due Date: ${debt.dueDate}
