@@ -7,6 +7,11 @@ document.getElementById('debtForm').addEventListener('submit', function(event) {
     let totalOwed = parseFloat(document.getElementById('totalOwed').value);
     let dueDate = document.getElementById('dueDate').value;
 
+    if (isNaN(totalOwed)) {
+        alert("Please enter a valid amount for Total Owed.");
+        return;
+    }
+
     let debt = {
         friendName,
         telegramUsername,
@@ -32,7 +37,7 @@ document.getElementById('debtForm').addEventListener('submit', function(event) {
         } else {
             console.error('Error adding debt:', response.statusText);
         }
-    });
+    }).catch(error => console.error('Fetch error:', error));
 });
 
 function addDebtToUI(debt, id) {
@@ -66,7 +71,9 @@ function addPartialPayment(id, button, totalOwed) {
         .then(data => {
             button.parentNode.querySelector('span').innerHTML += `<br>Payment: $${amount.toFixed(2)} (Remaining: $${data.remainingOwed.toFixed(2)})`;
             updateTotalBalance();
-        });
+        }).catch(error => console.error('Fetch error:', error));
+    } else {
+        alert("Please enter a valid payment amount.");
     }
 }
 
@@ -77,11 +84,13 @@ function updateTotalBalance() {
         let totalBalance = 0;
         debts.forEach(debt => {
             let partialPayments = JSON.parse(debt.partialPayments || '[]');
-            let remainingOwed = debt.totalOwed - partialPayments.reduce((acc, payment) => acc + payment, 0);
+            let totalOwed = parseFloat(debt.totalOwed) || 0;
+            let paidAmount = partialPayments.reduce((acc, payment) => acc + parseFloat(payment) || 0, 0);
+            let remainingOwed = totalOwed - paidAmount;
             totalBalance += remainingOwed;
         });
         document.getElementById('totalBalance').innerText = totalBalance.toFixed(2);
-    });
+    }).catch(error => console.error('Fetch error:', error));
 }
 
 // Initial fetch and display of debts
@@ -92,4 +101,4 @@ fetch('/api/debts')
         addDebtToUI(debt, debt.id);
     });
     updateTotalBalance();
-});
+}).catch(error => console.error('Fetch error:', error));
