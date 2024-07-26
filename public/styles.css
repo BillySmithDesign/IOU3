@@ -1,3 +1,4 @@
+/* General Styles */
 body {
     font-family: Arial, sans-serif;
     display: flex;
@@ -9,20 +10,24 @@ body {
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
+    background-attachment: fixed;
 }
 
 .container {
-    background: rgba(255, 255, 255, 0.8); /* Add some opacity to make the content readable */
+    background: rgba(255, 255, 255, 0.9); /* Add some opacity to make the content readable */
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    width: 100%;
+    width: 90%;
     max-width: 400px;
+    margin: 10px;
+    box-sizing: border-box;
 }
 
 h1 {
     margin: 0 0 20px;
     font-size: 24px;
+    text-align: center;
 }
 
 form {
@@ -35,6 +40,8 @@ input, button {
     margin-bottom: 10px;
     border: 1px solid #ddd;
     border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box;
 }
 
 label {
@@ -47,6 +54,12 @@ button {
     background: #007BFF;
     color: #fff;
     border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+button:hover {
+    background: #0056b3;
 }
 
 ul {
@@ -63,15 +76,28 @@ li {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 li span {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
 }
 
 .total-balance {
     margin-top: 20px;
     font-size: 18px;
     font-weight: bold;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    input, button, label {
+        font-size: 14px;
+    }
+    
+    h1 {
+        font-size: 20px;
+    }
 }
