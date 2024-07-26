@@ -11,13 +11,23 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Read debts from file
 function readDebts() {
-    const data = fs.readFileSync(dataFilePath);
-    return JSON.parse(data);
+    try {
+        const data = fs.readFileSync(dataFilePath);
+        return JSON.parse(data);
+    } catch (err) {
+        console.error('Error reading debts:', err);
+        throw err;
+    }
 }
 
 // Write debts to file
 function writeDebts(debts) {
-    fs.writeFileSync(dataFilePath, JSON.stringify(debts, null, 2));
+    try {
+        fs.writeFileSync(dataFilePath, JSON.stringify(debts, null, 2));
+    } catch (err) {
+        console.error('Error writing debts:', err);
+        throw err;
+    }
 }
 
 // Get all debts
