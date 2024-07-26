@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "main": "api/server.js",
   "scripts": {
-    "start": "node api/server.js"
+    "start": "node api/server.js",
+    "prisma": "prisma"
   },
   "dependencies": {
     "express": "^4.17.1",
     "body-parser": "^1.19.0",
-    "fs": "0.0.1-security",
-    "path": "^0.12.7"
+    "@prisma/client": "^3.8.0",
+    "prisma": "^3.8.0"
   }
 }
