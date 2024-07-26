@@ -1,81 +1,104 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const { Pool } = require('pg');
-const path = require('path');
-require('dotenv').config();
+document.getElementById('debtForm').addEventListener('submit', function(event) {
+    event.preventDefault();
 
-const app = express();
-const pool = new Pool({
-    connectionString: process.env.POSTGRES_URL,
-    ssl: {
-        rejectUnauthorized: false
+    let friendName = document.getElementById('friendName').value;
+    let telegramUsername = document.getElementById('telegramUsername').value;
+    let exchangeDate = document.getElementById('exchangeDate').value;
+    let totalOwed = parseFloat(document.getElementById('totalOwed').value);
+    let dueDate = document.getElementById('dueDate').value;
+
+    if (isNaN(totalOwed)) {
+        alert("Please enter a valid amount for Total Owed.");
+        return;
     }
-});
 
-// Create table if it doesn't exist
-pool.query(`
-  CREATE TABLE IF NOT EXISTS debts (
-    id SERIAL PRIMARY KEY,
-    friendName VARCHAR(100) NOT NULL,
-    telegramUsername VARCHAR(100) NOT NULL,
-    exchangeDate DATE NOT NULL,
-    totalOwed DECIMAL(10, 2) NOT NULL,
-    dueDate DATE NOT NULL,
-    partialPayments JSONB
-  )
-`).catch(err => console.error('Error creating table:', err));
+    let debt = {
+        friendName,
+        telegramUsername,
+        exchangeDate,
+        totalOwed,
+        dueDate,
+        partialPayments: []
+    };
 
-app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, '../public')));
-
-// Get all debts
-app.get('/api/debts', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM debts');
-        res.json(result.rows);
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server error');
-    }
-});
-
-// Add a new debt
-app.post('/api/debts', async (req, res) => {
-    const { friendName, telegramUsername, exchangeDate, totalOwed, dueDate, partialPayments } = req.body;
-    try {
-        const result = await pool.query(
-            'INSERT INTO debts (friendName, telegramUsername, exchangeDate, totalOwed, dueDate, partialPayments) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-            [friendName, telegramUsername, exchangeDate, totalOwed, dueDate, JSON.stringify(partialPayments || [])]
-        );
-        res.status(201).json({ id: result.rows[0].id });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server error');
-    }
-});
-
-// Update partial payments for a debt
-app.post('/api/debts/:id/payments', async (req, res) => {
-    const { id } = req.params;
-    const { amount } = req.body;
-    try {
-        const debtResult = await pool.query('SELECT * FROM debts WHERE id = $1', [id]);
-        const debt = debtResult.rows[0];
-        if (!debt) {
-            return res.status(404).send('Debt not found');
+    fetch('/api/debts', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(debt)
+    }).then(response => {
+        if (response.ok) {
+            response.json().then(data => {
+                addDebtToUI(debt, data.id);
+                updateTotalBalance();
+                document.getElementById('debtForm').reset();
+            });
+        } else {
+            console.error('Error adding debt:', response.statusText);
         }
-        const partialPayments = JSON.parse(debt.partialPayments || '[]');
-        partialPayments.push(amount);
-        const remainingOwed = debt.totalOwed - partialPayments.reduce((acc, payment) => acc + payment, 0);
-        await pool.query(
-            'UPDATE debts SET partialPayments = $1 WHERE id = $2',
-            [JSON.stringify(partialPayments), id]
-        );
-        res.json({ remainingOwed });
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Server error');
-    }
+    });
 });
 
-module.exports = app;
+function addDebtToUI(debt, id) {
+    let debtList = document.getElementById('debtList');
+    let li = document.createElement('li');
+
+    li.innerHTML = `
+        <span>
+            <strong>${debt.friendName}</strong> (@${debt.telegramUsername})<br>
+            Date Collected: ${debt.exchangeDate}<br>
+            Total Owed: $${debt.totalOwed.toFixed(2)}<br>
+            Due Date: ${debt.dueDate}
+        </span>
+        <button onclick="addPartialPayment(${id}, this, ${debt.totalOwed})">Add Payment</button>
+    `;
+
+    debtList.appendChild(li);
+}
+
+function addPartialPayment(id, button, totalOwed) {
+    let amount = parseFloat(prompt("Enter payment amount:"));
+    if (!isNaN(amount)) {
+        fetch(`/api/debts/${id}/payments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ amount })
+        })
+        .then(response => response.json())
+        .then(data => {
+            button.parentNode.querySelector('span').innerHTML += `<br>Payment: $${amount.toFixed(2)} (Remaining: $${data.remainingOwed.toFixed(2)})`;
+            updateTotalBalance();
+        });
+    } else {
+        alert("Please enter a valid payment amount.");
+    }
+}
+
+function updateTotalBalance() {
+    fetch('/api/debts')
+    .then(response => response.json())
+    .then(debts => {
+        let totalBalance = 0;
+        debts.forEach(debt => {
+            let partialPayments = JSON.parse(debt.partialPayments || '[]');
+            let totalOwed = parseFloat(debt.totalOwed) || 0;
+            let paidAmount = partialPayments.reduce((acc, payment) => acc + parseFloat(payment) || 0, 0);
+            let remainingOwed = totalOwed - paidAmount;
+            totalBalance += remainingOwed;
+        });
+        document.getElementById('totalBalance').innerText = totalBalance.toFixed(2);
+    });
+}
+
+// Initial fetch and display of debts
+fetch('/api/debts')
+.then(response => response.json())
+.then(debts => {
+    debts.forEach(debt => {
+        addDebtToUI(debt, debt.id);
+    });
+    updateTotalBalance();
+});
