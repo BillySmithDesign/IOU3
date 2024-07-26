@@ -4,12 +4,15 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background-color: #f4f4f4;
     margin: 0;
+    background-image: url('https://img.freepik.com/premium-photo/red-blue-background-with-man-red-suit-standing-front-large-red-circle_927978-1356.jpg?w=900');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
 }
 
 .container {
-    background: #fff;
+    background: rgba(255, 255, 255, 0.8); /* Add some opacity to make the content readable */
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -72,4 +75,3 @@ li span {
     font-size: 18px;
     font-weight: bold;
 }
-
