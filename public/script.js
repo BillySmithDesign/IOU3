@@ -95,15 +95,4 @@ function updateTotalBalance() {
             totalBalance += remainingOwed;
         });
         document.getElementById('totalBalance').innerText = totalBalance.toFixed(2);
-    }).catch(err => console.error('Fetch error:', err));
-}
-
-// Initial fetch and display of debts
-fetch('/api/debts')
-.then(response => response.json())
-.then(debts => {
-    debts.forEach(debt => {
-        addDebtToUI(debt, debt.id);
-    });
-    updateTotalBalance();
-}).catch(err => console.error('Fetch error:', err));
+    }).catch(err => console.error('Fetch error:',
